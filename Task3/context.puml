@@ -1,0 +1,50 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_TOP_DOWN()
+LAYOUT_WITH_LEGEND()
+'skinparam linetype ortho
+
+
+Person_Ext(client, "Клиента сайта")
+Person_Ext(client_bank, "Клиент интернет банка")
+
+Person(manager, "Менеджер по депозитам")
+Person(operator, "Менеджер кол-центра")
+Person(manager_front, "Менеджер отделения банка")
+
+System_Ext(sms_gateway, "Телеком-оператор sms")
+
+System_Boundary(bank, "Bank") {
+    Container(system_call, "Система кол-центра", "Java Spring Boot")
+    Container(site, "Сайт", "PHP / React.js")
+    Container(bank_site, "Интернет-банк", "ASP.NET MVC 4.5")
+    Container(ABC, "Автоматизированная банковская система (АБС)", "Delphi")
+    Container(service_sms, "СМС-шлюз телеком-оператора")
+}
+
+Rel(service_sms, sms_gateway, "Отправка смс уведомления", "REST")
+Rel(sms_gateway, client, "Отправка смс уведомления", "SMS")
+Rel(sms_gateway, client_bank, "Отправка смс уведомления", "SMS")
+
+Rel(client, site, "Просмотр депозитов и отправка заявки", "REST")
+Rel(ABC, service_sms, "Отправка смс уведомления", "REST")
+Rel(ABC, site, "Список ставок по депозитам", "Async \ Kafka")
+
+Rel(site, system_call, "Отправка заявки на открытие депозитного счета", "REST")
+Rel(system_call, ABC, "Создание заявки", "Async \ Kafka")
+
+Rel(client_bank, bank_site, "Просмотр депозитов и открытие депозитного счета", "REST")
+Rel(bank_site, ABC, "Открытие депозитного счета", "Async \ Kafka")
+Rel(ABC, bank_site, "Список ставок по депозитам", "Async \ Kafka")
+
+Rel(operator, system_call, "Чтение и обновление заявок", "REST")
+Rel(operator, client, "Согласование заявки", "call")
+
+
+
+Rel(manager, ABC, "Обработка заявок", "REST")
+Rel(manager, ABC, "Управление ставками по депозитам", "REST")
+
+Rel(manager_front, ABC, "Подтверждение идентификации клиента", "REST")
+@enduml

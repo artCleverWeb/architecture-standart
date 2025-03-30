@@ -1,0 +1,88 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_TOP_DOWN()
+LAYOUT_WITH_LEGEND()
+'skinparam linetype ortho
+
+
+Person_Ext(client, "Клиента сайта")
+Person_Ext(client_bank, "Клиент интернет банка")
+
+Person(manager, "Менеджер по депозитам")
+Person(operator, "Менеджер кол-центра")
+Person(manager_front, "Менеджер отделения банка")
+
+System_Ext(sms_gateway, "Телеком-оператор sms")
+
+System_Boundary(site, "Сайт") {
+    ContainerDb(site_db, "База данных", "PostgreSQL", "База данных сайта")
+    Container(site_front, "Интерфейс сайта", "React")
+    Container(site_back, "бэкенд сайта", "PHP")
+
+    Rel(site_front, site_back, "Просмотр депозитов и отправка заявки", "Rest \ HTTPs")
+    Rel_U(site_back, site_db, "Запись \ Чтение данных", "SQL \ TCP")
+}
+
+
+System_Boundary(system_call, "Система кол-центра") {
+    ContainerDb(system_call_db, "База данных", "PostgreSQL", "База данных cистемы кол-центра")
+    Container(system_call_front, "Интерфейс cистемы кол-центра", "React")
+    Container(system_call_back, "бэкенд cистемы кол-центра", "Java Spring Boot")
+
+    Rel(system_call_front, system_call_back, "Просмотр депозитов и отправка заявки, подтверждения через смс", "Rest \ HTTPs")
+    Rel_U(system_call_back, system_call_db, "Запись \ Чтение данных", "SQL \ TCP")
+}
+
+System_Boundary(bank_site, "Интернет-банк") {
+    ContainerDb(bank_site_db, "База данных", "MS SQL", "База данных cистемы Интернет-банк")
+    ContainerDb(bank_site_db_deposit, "База данных", "MS SQL", "База данных микросервиса депозитов")
+
+    Container(bank_site_front, "Интерфейс cистемы Интернет-банк", "React")
+    Container(bank_site_back, "бэкенд cистемы Интернет-банк", "Java Spring Boot")
+    Container(bank_site_back_deposit, "микросервис депозитной системы", "Java Spring Boot")
+
+    Rel(bank_site_front, bank_site_back, "Просмотр ставок по депозитам", "Rest \ HTTPs")
+    Rel(bank_site_front, bank_site_back_deposit, "Оформление заявки на депозит", "Rest \ HTTPs")
+
+    Rel_U(bank_site_back, bank_site_db, "Запись \ Чтение данных", "SQL \ TCP")
+    Rel_U(bank_site_back_deposit, bank_site_db_deposit, "Запись \ Чтение данных", "SQL \ TCP")
+}
+
+System_Boundary(ABS, "Автоматизированная банковская система (АБС)") {
+    ContainerDb(ABS_db, "База данных", "Oracle", "База данных АБС")
+    Container(ABS_back, "АБС", "Delphi")
+
+    Rel(ABS_back, ABS_db, "Запись \ Чтение данных", "SQL \ TCP")
+}
+
+System_Boundary(service_sms, "CМС-шлюз телеком-оператора") {
+    Container(service_sms_back, "CМС-шлюз телеком-оператора", "PHP")
+}
+
+SystemQueue(response_queue, "Kafka", "Очередь сообщений")
+
+Rel_R(ABS_back, response_queue, "Передача ставок по депозитам", "Async")
+Rel_R(bank_site_back, response_queue,  "Чтение ставок по депозитам", "Async")
+Rel_R(site_back, response_queue,  "Чтение ставок по депозитам", "Async")
+
+Rel(response_queue, ABS_back,  "Передача заявок по депозитам", "Async")
+Rel(bank_site_back_deposit, response_queue, "Передача заявок по депозитам", "Async")
+Rel(system_call_back, response_queue, "Передача заявок по депозитам", "Async")
+
+Rel(site_back, system_call_back, "ередача заявок по депозитам", "Rest \ HTTPs")
+
+Rel_U(ABS_back, service_sms_back, "Передача ставок по депозитам", "Rest \ HTTPs")
+Rel_U(service_sms_back, sms_gateway, "Передача ставок по депозитам", "Rest \ HTTPs")
+Rel(sms_gateway, client, "Смс уведомление", "SMS")
+Rel(sms_gateway, client_bank, "Смс уведомление", "SMS")
+
+Rel(manager, ABS_back, "Обработка заявок, управление ставками по депозитам", "HTTP \ UI")
+
+Rel(client_bank, bank_site_front, "Просмотр депозитов и отправка заявки", "HTTP \ UI")
+Rel(client, site_front, "Просмотр депозитов и отправка заявки", "HTTP \ UI")
+
+Rel(operator, system_call_front, "Чтение и обработка заявок", "HTTP \ UI")
+
+Rel(manager_front, ABS_back, "Подтверждение идентификации клиента", "HTTP \ UI")
+@enduml

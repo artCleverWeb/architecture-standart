@@ -1,0 +1,47 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_TOP_DOWN()
+LAYOUT_WITH_LEGEND()
+'skinparam linetype ortho
+
+
+Person_Ext(partner, "Менеджер партнерского кол-центра")
+
+Person(manager, "Менеджер по депозитам")
+Person(operator, "Менеджер кол-центра")
+
+System_Ext(partner_system, "Система партнерского кол-центра")
+
+System_Boundary(system_call, "Система кол-центра") {
+    ContainerDb(system_call_db, "База данных", "PostgreSQL", "База данных cистемы кол-центра")
+    Container(system_call_front, "Интерфейс cистемы кол-центра", "React")
+    Container(system_call_back, "бэкенд cистемы кол-центра", "Java Spring Boot")
+
+    Rel(system_call_front, system_call_back, "Просмотр ставок по депозитам", "Rest \ HTTPs")
+    Rel_U(system_call_back, system_call_db, "Запись \ Чтение данных", "SQL \ TCP")
+}
+
+System_Boundary(ABS, "Автоматизированная банковская система (АБС)") {
+    ContainerDb(ABS_db, "База данных", "Oracle", "База данных АБС")
+    Container(ABS_back, "АБС", "Delphi")
+
+    Container(send_point, "Сервис передачи ставок в партнерский сервис", "PHP")
+
+    Rel(ABS_back, ABS_db, "Запись \ Чтение данных", "SQL \ TCP")
+}
+
+SystemQueue(response_queue, "Kafka", "Очередь сообщений")
+
+Rel(ABS_back, response_queue, "Передача ставок по депозитам", "Async")
+Rel(send_point, response_queue,  "Чтение ставок по депозитам", "Async")
+Rel(system_call_back, response_queue,  "Чтение ставок по депозитам", "Async")
+
+
+Rel(manager, ABS_back, "Управление ставками по депозитам", "HTTP \ UI")
+Rel(operator, system_call_front, "Просмотр ставок по депозитам", "HTTP \ UI")
+
+
+Rel(partner, partner_system, "Просмотр ставок по депозитам", "HTTP \ UI")
+Rel(send_point, partner_system, "Передача ставок по депозитам", "sftp")
+@enduml

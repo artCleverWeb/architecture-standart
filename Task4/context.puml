@@ -1,0 +1,26 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_TOP_DOWN()
+LAYOUT_WITH_LEGEND()
+'skinparam linetype ortho
+
+Person(manager, "Менеджер по депозитам")
+Person(operator, "Менеджер кол-центра")
+Person_Ext(partner, "Менеджер партнерского кол-центра")
+
+System_Boundary(bank, "Bank") {
+    Container(system_call, "Система кол-центра", "Java Spring Boot")
+    Container(ABC, "Автоматизированная банковская система (АБС)", "Delphi")
+}
+
+System_Ext(partner_service, "Система партнерского кол-центра")
+
+Rel(ABC, partner_service, "Передача ставок по депозитам", "sftp")
+Rel(partner, partner_service, "Просмотр ставок по депозитам", "HTTPs")
+
+Rel(manager, ABC, "Обновление ставок по депозитам", "REST")
+
+Rel(ABC, system_call, "Передача ставок по депозитам", "Async \ Kafka")
+Rel(operator, system_call,  "Просмотр ставок по депозитам", "HTTPs")
+@enduml
